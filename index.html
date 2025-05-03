@@ -47,7 +47,8 @@
   <input type="number" id="quantity" placeholder="Количество">
   <input type="number" id="price" placeholder="Цена">
   <input type="file" id="photo" accept="image/*" capture="environment">
-  <button onclick="addItem()">Добавить</button>  <div class="total" id="total">Общая сумма: 0</div>
+  <button onclick="addItem()">Добавить</button>
+  <button onclick="clearList()" style="background:#f44336;color:#fff;">Очистить список</button>  <div class="total" id="total">Общая сумма: 0</div>
   <h3>Список товаров</h3>
   <div id="items"></div>  <script>
     let items = JSON.parse(localStorage.getItem('orders') || '[]');
@@ -103,6 +104,14 @@
       document.getElementById('price').value = '';
       document.getElementById('quantity').value = '';
       document.getElementById('photo').value = '';
+    }
+
+    function clearList() {
+      if (confirm("Удалить все товары?")) {
+        items = [];
+        saveItems();
+        showItems();
+      }
     }
 
     function showItems() {
