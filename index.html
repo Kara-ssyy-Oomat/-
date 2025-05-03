@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Мои заказы</title>
+  <link rel="manifest" href="manifest.json">
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js');
+      });
+    }
+  </script>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 10px;
+    }
+    .item {
+      border: 1px solid #ccc;
+      padding: 10px;
+      margin-bottom: 10px;
+      border-radius: 10px;
+    }
+    img {
+      max-width: 100px;
+      height: auto;
+      display: block;
+      margin-top: 5px;
+    }
+    input, button {
+      margin: 5px 0;
+      width: 100%;
+      padding: 10px;
+      font-size: 16px;
+    }
+    .total {
+      font-weight: bold;
+      font-size: 18px;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h2>Добавить товар</h2>
+  <input type="file" id="photo" accept="image/*" capture="environment">
+  <input type="text" id="name" placeholder="Название">
+  <input type="number" id="price" placeholder="Цена">
+  <input type="number" id="quantity" placeholder="Количество">
+  <button onclick="addItem()">Добавить</button>
+  
+  <div class="total" id="total">Общая сумма: 0</div>
+  <h3>Список товаров</h3>
+  <div id="items"></div>
+
+  <script>
+    let items = JSON.parse(localStorage.getItem('orders') || '[]');
+    const MAX_STORAGE_DAYS = 180;
+
+    function saveItems() {
+      const now = Date.now();
+      localStorage.setItem('orders', JSON.stringify(items));
+      localStorage.setItem('ordersDate', now);
+    }
+
+    function loadItems() {
+      const savedTime = parseInt(localStorage.getItem('ordersDate') || '0');
+      if (Date.now() - savedTime > MAX_STORAGE_DAYS * 86400 * 1000) {
+        items = [];
+        localStorage.removeItem('orders');
+        localStorage.removeItem('ordersDate');
+      }
+      showItems();
+    }
+
+    function addItem() {
+      const name = document.getElementById('name').value;
+      const price = parseFloat(document.getElementById('price').value);
+      const quantity = parseFloat(document.getElementById('quantity').value);
+      const photoInput = document.getElementById('photo');
+
+      if (!name || isNaN(price) || isNaN(quantity)) {
+        alert('Заполните все поля');
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = function () {
+        const photo = reader.result;
+        items.push({ name, price, quantity, photo });
+        saveItems();
+        showItems();
+        document.getElementById('name').value = '';
+        document.getElementById('price').value = '';
+        document.getElementById('quantity').value = '';
+        document.getElementById('photo').value = '';
+      };
+      if (photoInput.files[0]) {
+        reader.readAsDataURL(photoInput.files[0]);
+      } else {
+        items.push({ name, price, quantity, photo: null });
+        saveItems();
+        showItems();
+      }
+    }
+
+    function showItems() {
+      const list = document.getElementById('items');
+      list.innerHTML = '';
+      let total = 0;
+      for (const item of items) {
+        const div = document.createElement('div');
+        div.className = 'item';
+        div.innerHTML = `<strong>${item.name}</strong><br>Цена: ${item.price} x ${item.quantity} = ${item.price * item.quantity}`;
+        if (item.photo) {
+          const img = document.createElement('img');
+          img.src = item.photo;
+          div.appendChild(img);
+        }
+        list.appendChild(div);
+        total += item.price * item.quantity;
+      }
+      document.getElementById('total').textContent = 'Общая сумма: ' + total;
+    }
+
+    loadItems();
+  </script>
+</body>
+</html>
