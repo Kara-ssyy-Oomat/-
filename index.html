@@ -11,6 +11,7 @@
       });
     }
   </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <style>
     body {
       font-family: sans-serif;
@@ -48,7 +49,8 @@
   <input type="number" id="price" placeholder="Цена">
   <input type="file" id="photo" accept="image/*" capture="environment">
   <button onclick="addItem()">Добавить</button>
-  <button onclick="clearList()" style="background:#f44336;color:#fff;">Очистить список</button>  <div class="total" id="total">Общая сумма: 0</div>
+  <button onclick="clearList()" style="background:#f44336;color:#fff;">Очистить список</button>
+  <button onclick="downloadExcel()" style="background:#4CAF50;color:#fff;">Скачать как Excel</button>  <div class="total" id="total">Общая сумма: 0</div>
   <h3>Список товаров</h3>
   <div id="items"></div>  <script>
     let items = JSON.parse(localStorage.getItem('orders') || '[]');
@@ -131,6 +133,22 @@
         total += item.price * item.quantity;
       }
       document.getElementById('total').textContent = 'Общая сумма: ' + total;
+    }
+
+    function downloadExcel() {
+      const ws_data = [['Название', 'Количество', 'Цена', 'Итого']];
+      let total = 0;
+      for (const item of items) {
+        const sum = item.quantity * item.price;
+        ws_data.push([item.name, item.quantity, item.price, sum]);
+        total += sum;
+      }
+      ws_data.push(['', '', 'Общая сумма', total]);
+
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.aoa_to_sheet(ws_data);
+      XLSX.utils.book_append_sheet(wb, ws, "Список заказов");
+      XLSX.writeFile(wb, 'spisok_zakazov.xlsx');
     }
 
     loadItems();
