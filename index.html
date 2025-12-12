@@ -1,0 +1,1521 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Управление складом</title>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    @media (max-width: 768px) {
+      body {
+        padding: 10px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      body {
+        padding: 5px;
+      }
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    .header {
+      background: white;
+      padding: 25px;
+      border-radius: 15px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+      margin-bottom: 30px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+
+    .header h1 {
+      color: #667eea;
+      font-size: 32px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .header-buttons {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 15px;
+      font-weight: 600;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-success {
+      background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+      color: white;
+    }
+
+    .btn-success:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(40, 167, 69, 0.4);
+    }
+
+    .btn-danger {
+      background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+      color: white;
+    }
+
+    .btn-danger:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(220, 53, 69, 0.4);
+    }
+
+    .btn-warning {
+      background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%);
+      color: white;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+
+    .stat-card {
+      background: white;
+      padding: 25px;
+      border-radius: 15px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+      text-align: center;
+      transition: transform 0.3s;
+    }
+
+    .stat-card:hover {
+      transform: translateY(-5px);
+    }
+
+    .stat-card .icon {
+      font-size: 40px;
+      margin-bottom: 10px;
+    }
+
+    .stat-card .value {
+      font-size: 32px;
+      font-weight: bold;
+      color: #667eea;
+      margin-bottom: 5px;
+    }
+
+    .stat-card .label {
+      color: #666;
+      font-size: 14px;
+    }
+
+    .search-filter {
+      background: white;
+      padding: 20px;
+      border-radius: 15px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+      display: flex;
+      gap: 15px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .search-filter input,
+    .search-filter select {
+      padding: 12px;
+      border: 2px solid #e0e0e0;
+      border-radius: 10px;
+      font-size: 14px;
+      flex: 1;
+      min-width: 200px;
+    }
+
+    .search-filter input:focus,
+    .search-filter select:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    .products-table {
+      background: white;
+      border-radius: 15px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    thead {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+
+    thead th {
+      padding: 18px;
+      text-align: left;
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    tbody td {
+      padding: 15px 18px;
+      border-bottom: 1px solid #f0f0f0;
+    }
+
+    tbody tr:hover {
+      background: #f8f9ff;
+    }
+
+    .quantity-badge {
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-weight: 600;
+      font-size: 13px;
+    }
+
+    .quantity-low {
+      background: #ffe0e0;
+      color: #dc3545;
+    }
+
+    .quantity-medium {
+      background: #fff3cd;
+      color: #ff9800;
+    }
+
+    .quantity-good {
+      background: #d4edda;
+      color: #28a745;
+    }
+
+    .action-buttons {
+      display: flex;
+      gap: 8px;
+    }
+
+    .action-btn {
+      padding: 8px 12px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      transition: all 0.3s;
+    }
+
+    .action-btn-edit {
+      background: #ffc107;
+      color: white;
+    }
+
+    .action-btn-delete {
+      background: #dc3545;
+      color: white;
+    }
+
+    .action-btn:hover {
+      transform: scale(1.05);
+    }
+
+    /* Модальное окно */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.6);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+      backdrop-filter: blur(5px);
+    }
+
+    .modal-content {
+      background: white;
+      border-radius: 20px;
+      padding: 30px;
+      max-width: 600px;
+      width: 90%;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 25px;
+      padding-bottom: 15px;
+      border-bottom: 2px solid #f0f0f0;
+    }
+
+    .modal-header h2 {
+      color: #667eea;
+      font-size: 24px;
+    }
+
+    .close-btn {
+      font-size: 28px;
+      cursor: pointer;
+      color: #999;
+      transition: color 0.3s;
+    }
+
+    .close-btn:hover {
+      color: #dc3545;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      color: #333;
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #e0e0e0;
+      border-radius: 10px;
+      font-size: 14px;
+      transition: border-color 0.3s;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    .form-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      margin-top: 25px;
+    }
+
+    .history-item {
+      padding: 15px;
+      background: #f8f9ff;
+      border-left: 4px solid #667eea;
+      border-radius: 8px;
+      margin-bottom: 10px;
+    }
+
+    .history-item .date {
+      color: #999;
+      font-size: 12px;
+      margin-bottom: 5px;
+    }
+
+    .history-item .description {
+      color: #333;
+      font-size: 14px;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: #999;
+    }
+
+    .empty-state .icon {
+      font-size: 80px;
+      margin-bottom: 20px;
+    }
+
+    .empty-state p {
+      font-size: 18px;
+    }
+
+    @media (max-width: 768px) {
+      .container {
+        padding: 0;
+      }
+
+      .header {
+        flex-direction: column;
+        text-align: center;
+        padding: 12px;
+        gap: 10px;
+        border-radius: 8px;
+        margin-bottom: 10px;
+      }
+
+      .header h1 {
+        font-size: 18px;
+      }
+
+      .header-actions {
+        flex-direction: row;
+        flex-wrap: wrap;
+        width: 100%;
+        gap: 8px;
+        justify-content: center;
+      }
+
+      .header-actions .btn {
+        flex: 1;
+        min-width: 120px;
+        font-size: 13px;
+        padding: 10px 8px;
+      }
+
+      .search-filter {
+        flex-direction: column;
+        gap: 8px;
+        padding: 12px;
+        border-radius: 8px;
+        margin-bottom: 10px;
+      }
+
+      .search-filter input,
+      .search-filter select {
+        width: 100%;
+        font-size: 14px;
+        padding: 10px;
+      }
+
+      .stats-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        padding: 0;
+        margin-bottom: 10px;
+      }
+
+      .stat-card {
+        padding: 12px;
+        border-radius: 8px;
+      }
+
+      .stat-label {
+        font-size: 10px;
+      }
+
+      .stat-value {
+        font-size: 16px;
+      }
+
+      .table-wrapper {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        border-radius: 8px;
+        background: white;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      }
+
+      table {
+        font-size: 11px;
+        min-width: 100%;
+        width: 100%;
+      }
+
+      thead th {
+        padding: 10px 5px;
+        font-size: 10px;
+        white-space: nowrap;
+      }
+
+      tbody td {
+        padding: 10px 5px;
+        font-size: 11px;
+      }
+
+      /* Скрываем некоторые колонки на малых экранах */
+      thead th:nth-child(4),
+      tbody td:nth-child(4),
+      thead th:nth-child(7),
+      tbody td:nth-child(7) {
+        display: none;
+      }
+
+      .action-btn {
+        padding: 8px;
+        font-size: 16px;
+        min-width: 36px;
+        height: 36px;
+        border-radius: 6px;
+      }
+
+      .quantity-badge {
+        font-size: 10px;
+        padding: 4px 6px;
+        display: inline-block;
+      }
+
+      /* Модальное окно на мобильных */
+      .modal {
+        padding: 10px;
+      }
+
+      .modal-content {
+        width: 100%;
+        max-width: 100%;
+        max-height: 85vh;
+        overflow-y: auto;
+        margin: 0;
+        padding: 15px;
+        border-radius: 12px;
+      }
+
+      .modal-header {
+        padding: 0 0 15px 0;
+        margin-bottom: 15px;
+      }
+
+      .modal-header h2 {
+        font-size: 16px;
+      }
+
+      .close-btn {
+        font-size: 28px;
+      }
+
+      .form-group {
+        margin-bottom: 15px;
+      }
+
+      .form-group label {
+        font-size: 13px;
+        margin-bottom: 6px;
+      }
+
+      .form-group input,
+      .form-group select,
+      .form-group textarea {
+        font-size: 15px;
+        padding: 12px;
+        border-radius: 8px;
+      }
+
+      .form-group small {
+        font-size: 11px;
+      }
+
+      .form-actions {
+        flex-direction: row;
+        gap: 8px;
+        margin-top: 20px;
+      }
+
+      .form-actions .btn {
+        flex: 1;
+        padding: 12px;
+        font-size: 14px;
+      }
+
+      .login-container {
+        width: 95%;
+        max-width: 400px;
+        padding: 25px;
+        border-radius: 12px;
+      }
+
+      .login-container h2 {
+        font-size: 20px;
+      }
+
+      .login-container input {
+        font-size: 15px;
+        padding: 12px;
+      }
+
+      .login-container button {
+        font-size: 15px;
+        padding: 12px;
+      }
+
+      .empty-state {
+        padding: 30px 15px;
+      }
+
+      .empty-state .icon {
+        font-size: 40px;
+      }
+
+      .empty-state p {
+        font-size: 13px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      body {
+        padding: 5px;
+      }
+
+      .header {
+        padding: 10px;
+      }
+
+      .header h1 {
+        font-size: 16px;
+      }
+
+      .header-actions .btn {
+        font-size: 12px;
+        padding: 8px 6px;
+        min-width: 100px;
+      }
+
+      .stats-grid {
+        grid-template-columns: 1fr;
+        gap: 6px;
+      }
+
+      .stat-card {
+        padding: 10px;
+      }
+
+      .stat-label {
+        font-size: 9px;
+      }
+
+      .stat-value {
+        font-size: 14px;
+      }
+
+      .search-filter {
+        padding: 10px;
+      }
+
+      table {
+        font-size: 10px;
+      }
+
+      thead th {
+        padding: 8px 4px;
+        font-size: 9px;
+      }
+
+      tbody td {
+        padding: 8px 4px;
+        font-size: 10px;
+      }
+
+      /* На маленьких экранах показываем только ключевые колонки */
+      thead th:nth-child(5),
+      tbody td:nth-child(5),
+      thead th:nth-child(6),
+      tbody td:nth-child(6) {
+        display: none;
+      }
+
+      .action-btn {
+        padding: 6px;
+        font-size: 14px;
+        min-width: 32px;
+        height: 32px;
+      }
+
+      .modal-content {
+        width: 100%;
+        padding: 12px;
+        border-radius: 10px;
+      }
+
+      .modal-header h2 {
+        font-size: 15px;
+      }
+
+      .form-group input,
+      .form-group select,
+      .form-group textarea {
+        font-size: 14px;
+        padding: 10px;
+      }
+
+      .form-actions .btn {
+        padding: 10px;
+        font-size: 13px;
+      }
+
+      .login-container {
+        width: 98%;
+        padding: 20px;
+      }
+
+      .login-container h2 {
+        font-size: 18px;
+      }
+    }
+
+    .login-screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 2000;
+    }
+
+    .login-box {
+      background: white;
+      padding: 40px;
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      max-width: 400px;
+      width: 90%;
+      text-align: center;
+    }
+
+    .login-box h2 {
+      color: #667eea;
+      margin-bottom: 30px;
+      font-size: 28px;
+    }
+
+    .login-box input {
+      width: 100%;
+      padding: 15px;
+      border: 2px solid #e0e0e0;
+      border-radius: 10px;
+      font-size: 16px;
+      margin-bottom: 20px;
+    }
+
+    .login-box input:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Экран входа -->
+  <div class="login-screen" id="loginScreen">
+    <div class="login-box">
+      <h2>🏢 Вход на склад</h2>
+      <input type="password" id="loginPassword" placeholder="Введите пароль" />
+      <button class="btn btn-primary" onclick="login()" style="width: 100%; justify-content: center;">
+        Войти
+      </button>
+    </div>
+  </div>
+
+  <!-- Основное содержимое -->
+  <div class="container" id="mainContent" style="display: none;">
+    
+    <!-- Шапка -->
+    <div class="header">
+      <h1>📦 Управление складом</h1>
+      <div class="header-buttons">
+        <button class="btn btn-success" onclick="openAddModal()">
+          ➕ Добавить товар
+        </button>
+        <button class="btn btn-primary" onclick="openHistoryModal()">
+          📊 История операций
+        </button>
+        <button class="btn btn-danger" onclick="logout()">
+          🚪 Выход
+        </button>
+      </div>
+    </div>
+
+    <!-- Статистика -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="icon">📦</div>
+        <div class="value" id="totalProducts">0</div>
+        <div class="label">Всего позиций</div>
+      </div>
+      <div class="stat-card">
+        <div class="icon">📊</div>
+        <div class="value" id="totalQuantity">0</div>
+        <div class="label">Общее количество</div>
+      </div>
+      <div class="stat-card">
+        <div class="icon">⚠️</div>
+        <div class="value" id="lowStockCount">0</div>
+        <div class="label">Мало на складе</div>
+      </div>
+      <div class="stat-card">
+        <div class="icon">💰</div>
+        <div class="value" id="totalValue">0 сом</div>
+        <div class="label">Вложено денег</div>
+      </div>
+    </div>
+
+    <!-- Поиск и фильтры -->
+    <div class="search-filter">
+      <input type="text" id="searchInput" placeholder="🔍 Поиск товаров..." oninput="filterProducts()">
+      <select id="categoryFilter" onchange="filterProducts()">
+        <option value="">Все категории</option>
+      </select>
+      <select id="stockFilter" onchange="filterProducts()">
+        <option value="">Все товары</option>
+        <option value="low">Мало на складе (≤10)</option>
+        <option value="medium">Средний запас (11-50)</option>
+        <option value="high">Большой запас (>50)</option>
+      </select>
+    </div>
+
+    <!-- Таблица товаров -->
+    <div class="products-table">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Название</th>
+            <th>Категория</th>
+            <th>Количество</th>
+            <th>Единица</th>
+            <th>Цена прихода</th>
+            <th>Сумма прихода</th>
+            <th>Действия</th>
+          </tr>
+        </thead>
+        <tbody id="productsTableBody">
+          <!-- Товары загружаются динамически -->
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <!-- Модальное окно добавления/редактирования -->
+  <div class="modal" id="productModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="modalTitle">Добавить товар</h2>
+        <span class="close-btn" onclick="closeProductModal()">&times;</span>
+      </div>
+      <form id="productForm">
+        <div class="form-group">
+          <label>Название товара *</label>
+          <input type="text" id="productName" required>
+        </div>
+        <div class="form-group">
+          <label>Категория *</label>
+          <input type="text" id="productCategory" required placeholder="Например: Электроника, Мебель, Продукты">
+        </div>
+        <div class="form-group">
+          <label>Единица измерения *</label>
+          <select id="productUnit" required onchange="toggleBoxQuantityField()">
+            <option value="шт">шт (штуки)</option>
+            <option value="кг">кг (килограммы)</option>
+            <option value="л">л (литры)</option>
+            <option value="м">м (метры)</option>
+            <option value="упак">упак (упаковки)</option>
+            <option value="короб">короб (коробки)</option>
+          </select>
+        </div>
+        <div class="form-group" id="boxQuantityField" style="display: none;">
+          <label>Количество штук в одной коробке *</label>
+          <input type="number" id="boxQuantity" min="1" step="1" placeholder="Например: 12" oninput="calculateTotalPieces()">
+          <small style="color: #666; font-size: 12px; display: block; margin-top: 5px;">Укажите сколько штук товара находится в одной коробке</small>
+        </div>
+        <div class="form-group">
+          <label id="quantityLabel">Количество *</label>
+          <input type="number" id="productQuantity" required min="0" step="1" oninput="calculateTotalPieces()">
+        </div>
+        <div class="form-group" id="totalPiecesField" style="display: none;">
+          <div style="background: #e3f2fd; padding: 12px; border-radius: 8px; border: 2px solid #2196f3;">
+            <div style="font-size: 14px; color: #1976d2; font-weight: 600; margin-bottom: 5px;">📊 Итого штук на складе:</div>
+            <div style="font-size: 24px; color: #0d47a1; font-weight: bold;" id="totalPiecesValue">0 шт</div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Цена прихода за единицу (сом) *</label>
+          <input type="number" id="productPrice" min="0" step="0.01" placeholder="0.00" required>
+        </div>
+        <div class="form-group">
+          <label>Минимальный остаток (для уведомлений)</label>
+          <input type="number" id="productMinStock" min="0" step="1" value="10">
+        </div>
+        <div class="form-group">
+          <label>Описание</label>
+          <textarea id="productDescription" rows="3" placeholder="Дополнительная информация о товаре"></textarea>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn btn-danger" onclick="closeProductModal()">Отмена</button>
+          <button type="submit" class="btn btn-success">Сохранить</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Модальное окно истории -->
+  <div class="modal" id="historyModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>📊 История операций</h2>
+        <span class="close-btn" onclick="closeHistoryModal()">&times;</span>
+      </div>
+      <div id="historyList">
+        <!-- История загружается динамически -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Модальное окно изменения количества -->
+  <div class="modal" id="quantityModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="quantityModalTitle">Изменить количество</h2>
+        <span class="close-btn" onclick="closeQuantityModal()">&times;</span>
+      </div>
+      <div class="form-group">
+        <label>Текущее количество: <span id="currentQuantity"></span></label>
+      </div>
+      <div class="form-group">
+        <label>Единица измерения *</label>
+        <select id="quantityModalUnit" onchange="toggleQuantityModalBoxField()">
+          <option value="шт">шт (штуки)</option>
+          <option value="кг">кг (килограммы)</option>
+          <option value="л">л (литры)</option>
+          <option value="м">м (метры)</option>
+          <option value="упак">упак (упаковки)</option>
+          <option value="короб">короб (коробки)</option>
+        </select>
+      </div>
+      <div class="form-group" id="quantityModalBoxField" style="display: none;">
+        <label>Количество штук в одной коробке *</label>
+        <input type="number" id="quantityModalBoxQuantity" min="1" step="1" placeholder="Например: 12" oninput="calculateQuantityModalTotal()">
+        <small style="color: #666; font-size: 12px; display: block; margin-top: 5px;">Укажите сколько штук товара находится в одной коробке</small>
+      </div>
+      <div class="form-group">
+        <label>Тип операции</label>
+        <select id="operationType">
+          <option value="add">Поступление на склад</option>
+          <option value="remove">Отгрузка со склада</option>
+          <option value="set">Установить новое значение</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label id="quantityModalLabel">Количество</label>
+        <input type="number" id="quantityChange" min="0" step="1" value="0" oninput="calculateQuantityModalTotal()">
+      </div>
+      <div class="form-group" id="quantityModalTotalField" style="display: none;">
+        <div style="background: #e3f2fd; padding: 12px; border-radius: 8px; border: 2px solid #2196f3;">
+          <div style="font-size: 14px; color: #1976d2; font-weight: 600; margin-bottom: 5px;">📊 Итого штук:</div>
+          <div style="font-size: 24px; color: #0d47a1; font-weight: bold;" id="quantityModalTotalValue">0 шт</div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Комментарий</label>
+        <textarea id="quantityComment" rows="2" placeholder="Причина изменения..."></textarea>
+      </div>
+      <div class="form-actions">
+        <button type="button" class="btn btn-danger" onclick="closeQuantityModal()">Отмена</button>
+        <button type="button" class="btn btn-success" onclick="saveQuantityChange()">Применить</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Firebase конфигурация
+    const firebaseConfig = {
+      apiKey: "AIzaSyBRQ6hH7kXq7ApJmqbvTG1EQsXwxWEnaGg",
+      authDomain: "svoysayet.firebaseapp.com",
+      projectId: "svoysayet",
+      storageBucket: "svoysayet.firebasestorage.app",
+      messagingSenderId: "450143000217",
+      appId: "1:450143000217:web:7495cefaea0b94966e8a08",
+      measurementId: "G-Y8VG9E29FY"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    // Данные
+    let products = [];
+    let currentEditId = null;
+    let currentQuantityEditId = null;
+    const PASSWORD = "009860";
+
+    // Вход
+    function login() {
+      const password = document.getElementById('loginPassword').value;
+      if (password === PASSWORD) {
+        document.getElementById('loginScreen').style.display = 'none';
+        document.getElementById('mainContent').style.display = 'block';
+        loadProducts();
+      } else {
+        Swal.fire('Ошибка', 'Неверный пароль', 'error');
+      }
+    }
+
+    // Выход
+    function logout() {
+      document.getElementById('loginScreen').style.display = 'flex';
+      document.getElementById('mainContent').style.display = 'none';
+      document.getElementById('loginPassword').value = '';
+    }
+
+    // Загрузка товаров
+    async function loadProducts() {
+      try {
+        const snapshot = await db.collection('products').get();
+        products = snapshot.docs.map(doc => ({
+          ...doc.data(),
+          id: doc.id,
+          name: doc.data().title || doc.data().name,
+          category: doc.data().category || 'Все товары',
+          quantity: doc.data().quantity || 0,
+          unit: doc.data().unit || 'шт',
+          boxQuantity: doc.data().boxQuantity || null,
+          boxCount: doc.data().boxCount || null,
+          price: doc.data().costPrice || 0,
+          minStock: 10,
+          description: doc.data().description || ''
+        }));
+        updateStats();
+        renderProducts();
+        updateCategoryFilter();
+      } catch (error) {
+        console.error('Ошибка загрузки:', error);
+        Swal.fire('Ошибка', 'Не удалось загрузить товары', 'error');
+      }
+    }
+
+    // Обновление статистики
+    function updateStats() {
+      const totalProducts = products.length;
+      // quantity уже содержит общее количество штук для всех товаров
+      const totalQuantity = products.reduce((sum, p) => sum + (p.quantity || 0), 0);
+      const lowStockCount = products.filter(p => p.quantity <= (p.minStock || 10)).length;
+      // quantity уже содержит общее количество штук, просто умножаем на цену
+      const totalValue = products.reduce((sum, p) => sum + ((p.quantity || 0) * (p.price || 0)), 0);
+
+      document.getElementById('totalProducts').textContent = totalProducts;
+      document.getElementById('totalQuantity').textContent = totalQuantity;
+      document.getElementById('lowStockCount').textContent = lowStockCount;
+      document.getElementById('totalValue').textContent = totalValue.toFixed(2) + ' сом';
+    }
+
+    // Отрисовка товаров
+    function renderProducts() {
+      const tbody = document.getElementById('productsTableBody');
+      const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+      const categoryFilter = document.getElementById('categoryFilter').value.toLowerCase();
+      const stockFilter = document.getElementById('stockFilter').value;
+
+      let filtered = products.filter(p => {
+        const matchSearch = !searchTerm || 
+          (p.name && p.name.toLowerCase().includes(searchTerm)) ||
+          (p.category && p.category.toLowerCase().includes(searchTerm));
+        
+        const matchCategory = !categoryFilter || 
+          (p.category && p.category.toLowerCase() === categoryFilter);
+        
+        let matchStock = true;
+        if (stockFilter === 'low') matchStock = p.quantity <= 10;
+        if (stockFilter === 'medium') matchStock = p.quantity > 10 && p.quantity <= 50;
+        if (stockFilter === 'high') matchStock = p.quantity > 50;
+
+        return matchSearch && matchCategory && matchStock;
+      });
+
+      // Сортировка по категориям в заданном порядке
+      const categoryOrder = ['все товары', 'скотч', 'нож', 'ножницы', 'корейские', 'бытовые'];
+      filtered.sort((a, b) => {
+        const catA = (a.category || '').toLowerCase();
+        const catB = (b.category || '').toLowerCase();
+        
+        let indexA = categoryOrder.indexOf(catA);
+        let indexB = categoryOrder.indexOf(catB);
+        
+        // Если категория не найдена в списке, ставим её в конец
+        if (indexA === -1) indexA = 999;
+        if (indexB === -1) indexB = 999;
+        
+        // Сначала сортируем по категории
+        if (indexA !== indexB) {
+          return indexA - indexB;
+        }
+        
+        // Внутри одной категории сортируем по имени
+        return (a.name || '').localeCompare(b.name || '');
+      });
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="8" class="empty-state">
+              <div class="icon">📭</div>
+              <p>Товары не найдены</p>
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = filtered.map((product, index) => {
+        const quantity = product.quantity || 0;
+        const minStock = product.minStock || 10;
+        const price = product.price || 0;
+        const total = quantity * price;
+        
+        let quantityClass = 'quantity-good';
+        if (quantity <= minStock) quantityClass = 'quantity-low';
+        else if (quantity <= minStock * 2) quantityClass = 'quantity-medium';
+
+        return `
+          <tr>
+            <td>${index + 1}</td>
+            <td><strong>${product.name || 'Без названия'}</strong></td>
+            <td>${product.category || '-'}</td>
+            <td>
+              <span class="quantity-badge ${quantityClass}">
+                ${product.unit === 'короб' && product.boxCount ? product.boxCount + ' ' + product.unit : quantity + ' ' + (product.unit || 'шт')}
+              </span>
+              ${product.unit === 'короб' && product.boxQuantity ? `<div style="font-size: 11px; color: #666; margin-top: 3px;">📦 ${product.boxQuantity} шт/короб = <strong style="color: #2196f3;">${quantity} шт</strong></div>` : ''}
+            </td>
+            <td>${product.unit || 'шт'}</td>
+            <td><strong>${price.toFixed(2)} сом</strong></td>
+            <td><strong style="color: #667eea;">${total.toFixed(2)} сом</strong></td>
+            <td>
+              <div class="action-buttons">
+                <button class="action-btn action-btn-edit" onclick="openQuantityModal('${product.id}')" title="Изменить количество">
+                  📊
+                </button>
+                <button class="action-btn action-btn-edit" onclick="editProduct('${product.id}')" title="Редактировать">
+                  ✏️
+                </button>
+                <button class="action-btn action-btn-delete" onclick="deleteProduct('${product.id}')" title="Удалить">
+                  🗑️
+                </button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // Фильтрация
+    function filterProducts() {
+      renderProducts();
+    }
+
+    // Обновление фильтра категорий
+    function updateCategoryFilter() {
+      const categories = [...new Set(products.map(p => p.category).filter(c => c))];
+      const select = document.getElementById('categoryFilter');
+      const currentValue = select.value;
+      
+      select.innerHTML = '<option value="">Все категории</option>' +
+        categories.map(cat => `<option value="${cat.toLowerCase()}">${cat}</option>`).join('');
+      
+      select.value = currentValue;
+    }
+
+    // Открыть модальное окно добавления
+    function openAddModal() {
+      currentEditId = null;
+      document.getElementById('modalTitle').textContent = 'Добавить товар';
+      document.getElementById('productForm').reset();
+      toggleBoxQuantityField();
+      document.getElementById('productModal').style.display = 'flex';
+    }
+
+    // Редактирование товара
+    function editProduct(id) {
+      const product = products.find(p => p.id === id);
+      if (!product) return;
+
+      currentEditId = id;
+      document.getElementById('modalTitle').textContent = 'Редактировать товар';
+      document.getElementById('productName').value = product.name || '';
+      document.getElementById('productCategory').value = product.category || '';
+      // Для коробок показываем количество коробок, для остальных - штуки
+      document.getElementById('productQuantity').value = product.unit === 'короб' && product.boxCount ? product.boxCount : product.quantity;
+      document.getElementById('productUnit').value = product.unit || 'шт';
+      document.getElementById('boxQuantity').value = product.boxQuantity || '';
+      document.getElementById('productPrice').value = product.price || 0;
+      document.getElementById('productMinStock').value = product.minStock || 10;
+      document.getElementById('productDescription').value = product.description || '';
+      toggleBoxQuantityField();
+      document.getElementById('productModal').style.display = 'flex';
+    }
+
+    // Показать/скрыть поле количества штук в коробке
+    function toggleBoxQuantityField() {
+      const unit = document.getElementById('productUnit').value;
+      const boxField = document.getElementById('boxQuantityField');
+      const totalField = document.getElementById('totalPiecesField');
+      const quantityLabel = document.getElementById('quantityLabel');
+      
+      if (unit === 'короб') {
+        boxField.style.display = 'block';
+        totalField.style.display = 'block';
+        quantityLabel.textContent = 'Количество коробок *';
+        calculateTotalPieces();
+      } else {
+        boxField.style.display = 'none';
+        totalField.style.display = 'none';
+        quantityLabel.textContent = 'Количество *';
+      }
+    }
+    
+    // Рассчитать общее количество штук
+    function calculateTotalPieces() {
+      const unit = document.getElementById('productUnit').value;
+      if (unit !== 'короб') return;
+      
+      const boxQuantity = parseInt(document.getElementById('boxQuantity').value) || 0;
+      const numBoxes = parseInt(document.getElementById('productQuantity').value) || 0;
+      const totalPieces = boxQuantity * numBoxes;
+      
+      document.getElementById('totalPiecesValue').textContent = totalPieces.toLocaleString() + ' шт';
+    }
+
+    // Закрыть модальное окно товара
+    function closeProductModal() {
+      document.getElementById('productModal').style.display = 'none';
+      currentEditId = null;
+    }
+
+    // Сохранение товара
+    document.getElementById('productForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const unit = document.getElementById('productUnit').value;
+      const boxQuantity = parseInt(document.getElementById('boxQuantity').value) || null;
+      const inputQuantity = parseInt(document.getElementById('productQuantity').value) || 0;
+      
+      // Если короб - сохраняем общее количество штук (коробки × штук в коробке)
+      let actualQuantity = inputQuantity;
+      let boxCount = null;
+      if (unit === 'короб' && boxQuantity) {
+        actualQuantity = inputQuantity * boxQuantity; // Общее количество штук
+        boxCount = inputQuantity; // Количество коробок
+      }
+      
+      const productData = {
+        name: document.getElementById('productName').value.trim(),
+        category: document.getElementById('productCategory').value.trim(),
+        quantity: actualQuantity, // Общее количество штук
+        unit: unit,
+        boxQuantity: boxQuantity, // Штук в одной коробке
+        boxCount: boxCount, // Количество коробок
+        price: parseFloat(document.getElementById('productPrice').value) || 0,
+        minStock: parseInt(document.getElementById('productMinStock').value) || 10,
+        description: document.getElementById('productDescription').value.trim(),
+        updatedAt: Date.now()
+      };
+
+      try {
+        if (currentEditId) {
+          // Обновление
+          await db.collection('products').doc(currentEditId).update({
+            title: productData.name,
+            costPrice: productData.price,
+            quantity: productData.quantity,
+            category: productData.category,
+            boxQuantity: productData.boxQuantity,
+            boxCount: productData.boxCount,
+            unit: productData.unit,
+            description: productData.description,
+            updatedAt: productData.updatedAt
+          });
+
+          Swal.fire('Успех!', 'Товар обновлен', 'success');
+        } else {
+          // Создание
+          productData.createdAt = Date.now();
+          const docRef = await db.collection('products').add({
+            title: productData.name,
+            costPrice: productData.price,
+            price: productData.price,
+            quantity: productData.quantity,
+            category: productData.category,
+            boxQuantity: productData.boxQuantity,
+            boxCount: productData.boxCount,
+            unit: productData.unit,
+            description: productData.description,
+            image: '',
+            blocked: false,
+            createdAt: productData.createdAt,
+            updatedAt: productData.updatedAt
+          });
+
+          Swal.fire('Успех!', 'Товар добавлен', 'success');
+        }
+
+        closeProductModal();
+        loadProducts();
+      } catch (error) {
+        console.error('Ошибка:', error);
+        Swal.fire('Ошибка', 'Не удалось сохранить товар', 'error');
+      }
+    });
+
+    // Удаление товара
+    async function deleteProduct(id) {
+      const product = products.find(p => p.id === id);
+      if (!product) return;
+
+      const result = await Swal.fire({
+        title: 'Удалить товар?',
+        text: `Вы уверены, что хотите удалить "${product.name}"?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc3545',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Да, удалить',
+        cancelButtonText: 'Отмена'
+      });
+
+      if (result.isConfirmed) {
+        try {
+          await db.collection('products').doc(id).delete();
+
+          Swal.fire('Удалено!', 'Товар удален', 'success');
+          loadProducts();
+        } catch (error) {
+          console.error('Ошибка:', error);
+          Swal.fire('Ошибка', 'Не удалось удалить товар', 'error');
+        }
+      }
+    }
+
+    // Открыть модальное окно изменения количества
+    function openQuantityModal(id) {
+      const product = products.find(p => p.id === id);
+      if (!product) return;
+
+      currentQuantityEditId = id;
+      document.getElementById('quantityModalTitle').textContent = product.name;
+      document.getElementById('currentQuantity').textContent = `${product.quantity} ${product.unit}`;
+      document.getElementById('quantityModalUnit').value = product.unit || 'шт';
+      document.getElementById('quantityModalBoxQuantity').value = product.boxQuantity || '';
+      document.getElementById('operationType').value = 'add';
+      document.getElementById('quantityChange').value = 0;
+      document.getElementById('quantityComment').value = '';
+      toggleQuantityModalBoxField();
+      document.getElementById('quantityModal').style.display = 'flex';
+    }
+
+    // Переключение поля коробок в модальном окне количества
+    function toggleQuantityModalBoxField() {
+      const unit = document.getElementById('quantityModalUnit').value;
+      const boxField = document.getElementById('quantityModalBoxField');
+      const totalField = document.getElementById('quantityModalTotalField');
+      const quantityLabel = document.getElementById('quantityModalLabel');
+      
+      if (unit === 'короб') {
+        boxField.style.display = 'block';
+        totalField.style.display = 'block';
+        quantityLabel.textContent = 'Количество коробок';
+        calculateQuantityModalTotal();
+      } else {
+        boxField.style.display = 'none';
+        totalField.style.display = 'none';
+        quantityLabel.textContent = 'Количество';
+      }
+    }
+    
+    // Расчет общего количества штук в модальном окне
+    function calculateQuantityModalTotal() {
+      const unit = document.getElementById('quantityModalUnit').value;
+      if (unit !== 'короб') return;
+      
+      const boxQuantity = parseInt(document.getElementById('quantityModalBoxQuantity').value) || 0;
+      const numBoxes = parseInt(document.getElementById('quantityChange').value) || 0;
+      const totalPieces = boxQuantity * numBoxes;
+      
+      document.getElementById('quantityModalTotalValue').textContent = totalPieces.toLocaleString() + ' шт';
+    }
+
+    // Закрыть модальное окно количества
+    function closeQuantityModal() {
+      document.getElementById('quantityModal').style.display = 'none';
+      currentQuantityEditId = null;
+    }
+
+    // Сохранить изменение количества
+    async function saveQuantityChange() {
+      const product = products.find(p => p.id === currentQuantityEditId);
+      if (!product) return;
+
+      const unit = document.getElementById('quantityModalUnit').value;
+      const boxQuantity = parseInt(document.getElementById('quantityModalBoxQuantity').value) || null;
+      const operationType = document.getElementById('operationType').value;
+      let changeValue = parseInt(document.getElementById('quantityChange').value) || 0;
+      const comment = document.getElementById('quantityComment').value.trim();
+
+      // Если короб - конвертируем в штуки
+      let actualChangeValue = changeValue;
+      let boxCount = null;
+      if (unit === 'короб' && boxQuantity) {
+        actualChangeValue = changeValue * boxQuantity; // Количество штук
+        boxCount = changeValue; // Количество коробок
+      }
+
+      let newQuantity = product.quantity || 0;
+      let newBoxCount = product.boxCount || 0;
+      let actionDescription = '';
+
+      if (operationType === 'add') {
+        newQuantity += actualChangeValue;
+        if (unit === 'короб' && boxCount) {
+          newBoxCount += boxCount;
+          actionDescription = `Поступление: +${boxCount} коробок (${actualChangeValue} шт)`;
+        } else {
+          actionDescription = `Поступление: +${changeValue} ${unit}`;
+        }
+      } else if (operationType === 'remove') {
+        newQuantity -= actualChangeValue;
+        if (newQuantity < 0) newQuantity = 0;
+        if (unit === 'короб' && boxCount) {
+          newBoxCount -= boxCount;
+          if (newBoxCount < 0) newBoxCount = 0;
+          actionDescription = `Отгрузка: -${boxCount} коробок (${actualChangeValue} шт)`;
+        } else {
+          actionDescription = `Отгрузка: -${changeValue} ${unit}`;
+        }
+      } else if (operationType === 'set') {
+        newQuantity = actualChangeValue;
+        if (unit === 'короб' && boxCount) {
+          newBoxCount = boxCount;
+          actionDescription = `Установлено: ${boxCount} коробок (${actualChangeValue} шт)`;
+        } else {
+          actionDescription = `Установлено новое количество: ${changeValue} ${unit}`;
+        }
+      }
+
+      if (comment) {
+        actionDescription += ` (${comment})`;
+      }
+
+      try {
+        await db.collection('products').doc(currentQuantityEditId).update({
+          quantity: newQuantity,
+          unit: unit,
+          boxQuantity: boxQuantity,
+          boxCount: newBoxCount,
+          updatedAt: Date.now()
+        });
+
+        Swal.fire('Успех!', 'Количество обновлено', 'success');
+        closeQuantityModal();
+        loadProducts();
+      } catch (error) {
+        console.error('Ошибка:', error);
+        Swal.fire('Ошибка', 'Не удалось обновить количество', 'error');
+      }
+    }
+
+    // Открыть историю
+    async function openHistoryModal() {
+      document.getElementById('historyModal').style.display = 'flex';
+      
+      try {
+        const snapshot = await db.collection('warehouse_history')
+          .orderBy('timestamp', 'desc')
+          .limit(50)
+          .get();
+        
+        const historyList = document.getElementById('historyList');
+        
+        if (snapshot.empty) {
+          historyList.innerHTML = '<div class="empty-state"><p>История пуста</p></div>';
+          return;
+        }
+
+        historyList.innerHTML = snapshot.docs.map(doc => {
+          const data = doc.data();
+          const date = new Date(data.timestamp);
+          const dateStr = date.toLocaleDateString('ru-RU') + ' ' + date.toLocaleTimeString('ru-RU');
+          
+          let icon = '📝';
+          if (data.action === 'create') icon = '➕';
+          if (data.action === 'delete') icon = '🗑️';
+          if (data.action === 'add') icon = '📥';
+          if (data.action === 'remove') icon = '📤';
+          if (data.action === 'edit') icon = '✏️';
+          
+          return `
+            <div class="history-item">
+              <div class="date">${dateStr}</div>
+              <div class="description">${icon} <strong>${data.productName}</strong> — ${data.description}</div>
+            </div>
+          `;
+        }).join('');
+      } catch (error) {
+        console.error('Ошибка загрузки истории:', error);
+        Swal.fire('Ошибка', 'Не удалось загрузить историю', 'error');
+      }
+    }
+
+    // Закрыть историю
+    function closeHistoryModal() {
+      document.getElementById('historyModal').style.display = 'none';
+    }
+
+    // Обработка Enter в поле пароля
+    document.getElementById('loginPassword').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') login();
+    });
+
+    // Закрытие модальных окон по клику вне их
+    window.onclick = function(event) {
+      if (event.target.classList.contains('modal')) {
+        event.target.style.display = 'none';
+      }
+    };
+  </script>
+
+</body>
+</html>
